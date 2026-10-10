@@ -1,3 +1,5 @@
+import Mathlib.Algebra.Group.Monoid
+
 -- MyState
 
 def MyState (σ : Type u) (α : Type v) := σ → (σ × α)
@@ -18,19 +20,34 @@ def put (s : σ) : MyState σ Unit := λ_ => ⟨s, ()⟩
 def update (f : σ → σ) : MyState σ Unit := λs => ⟨f s, ()⟩
 
 
+-- Reader
+
+def Reader.{u,v} (r : Type u) (α : Type v) := r → α
+
+instance monadReader : Monad (Reader r) where
+  pure a := fun _ => a
+  -- bind (ma : r→α) (mf : α → (r→β)) : r→β
+  bind {α β} (ma : r→α) (mf : α → (r→β)) := fun x => mf (ma x) x
+
+def read : Reader r r := id
+
+
 -- Writer
 
-def Writer.{v} (α : Type v) := (List String) × α
-instance monadWriter : Monad Writer where
-  pure a := ⟨[], a⟩
-  bind {α β} (ma : Writer α) (famb : α → Writer β) : Writer β :=
+def Writer.{v} (w : Type u) (α : Type v) := w × α
+
+instance monadWriter [mndW : Monoid w] : Monad (Writer w) where
+  pure a := ⟨mndW.one, a⟩
+  bind {α β} (ma : Writer w α) (famb : α → Writer w β) : Writer w β :=
     let ⟨wa,a⟩ := ma
     let mb := famb a
     let ⟨wf,b⟩ := mb
-    ⟨wa ++ wf, b⟩
+    ⟨mndW.mul wa wf, b⟩
 
-def tell (log : List String) : Writer Unit := ⟨log, ()⟩
-def execWriter (w : Writer α) : List String := w.1
+def tell (log : w) : Writer w Unit := ⟨log, ()⟩
+def execWriter (wa : Writer w α) : w := wa.1
+
+
 
 
 -- MyStateT
