@@ -1,5 +1,3 @@
-import Std.Data.HashMap
-
 abbrev Symbol := String
 
 
@@ -15,6 +13,10 @@ inductive Prim
   | eq : Prim
 deriving Repr
 
+def Prim.sym : Prim → String
+  | .add => "+" | .sub => "-" | .mul => "*" | .div => "/"
+  | .mod => "%" | .lt => "<" | .eq => "=="
+
 
 -- Expr and Clause
 
@@ -27,11 +29,11 @@ mutual
   inductive Expr
     | int (n : Int)
     | bool (b : Bool)
-    | prim (op : Prim) (args : List Expr)
+    | binop (op : Prim) (lhs : Expr) (rhs : Expr)
     | iff (test : Expr) (thn : Expr) (els : Expr)
     | ref (x : Symbol)
     | lett (x : Symbol) (rhs : Expr) (body : Expr)
-    | fn (self : Option Symbol) (params : List Symbol) (body : Expr)
+    | fn (params : List Symbol) (body : Expr)
     | app (fn : Expr) (args : List Expr)
     | con (tag : Symbol) (args : List Expr)
     | case (scrut : Expr) (clauses : List Clause)
@@ -43,7 +45,7 @@ end
 inductive Value
 | int (n : Int)
 | bool (b : Bool)
-| fn (params : List Symbol) (body : Expr)
+| fn (params : List Symbol) (body : Expr) (env : List (Symbol × Value))
 | con (tag : Symbol) (fields : List Value)
 | error (desc : String)
 instance : Inhabited Value := ⟨.int 0⟩
@@ -57,19 +59,24 @@ instance reprValue : Repr Value where
   reprPrec v p := match v with
     | Value.bool b => f!"BOOL {if b then "True" else "False"}"
     | Value.con tag _fields => f!"CON {tag}"
-    | Value.fn params _ => f!"FUN {params.repr p}"
+    | Value.fn params _ _ => f!"FUN {params.repr p}"
     | Value.int n => f!"INT {n.repr}"
     | Value.error desc => f!"ERROR '{desc}'"
 
 
 -- Env
 
-abbrev Env := @Std.HashMap Symbol Value (inferInstance) (inferInstance)
+/-- Lexical environment: an association list, innermost binding first. (A list rather than a
+hash map so that closures can store one inside `Value`.) Never holds `.error` values. -/
+abbrev Env := List (Symbol × Value)
+
+def env_lookup (env : Env) (x : Symbol) : Option Value :=
+  (env.find? (·.1 == x)).map (·.2)
 
 def env_insert (env : Env) (x : Symbol) (v : Value) : Option Env :=
   match v with
   | .error _ => none  -- !Warning: error info (whatever the error was) is lost!
-  | _ => env.insert x v
+  | _ => some ((x, v) :: env)
 
 def env_extend (env : Env) (xs : List Symbol) (vs : List Value) : Option Env :=
   match xs, vs with
