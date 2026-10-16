@@ -195,7 +195,8 @@ in the current environment extended with `x` bound to the result.
 
 - `(fun p1 … pn body)` is checked, then yields a closure over the current environment:
   - `n = 0` ⇒ `malformed: function has no parameters`;
-  - duplicate parameters ⇒ `malformed: duplicate parameter 'p'`.
+  - duplicate parameters ⇒ `malformed: duplicate parameter 'p'` (if there is more than one
+     duplicate, it is not specified which should be included in the error message).
 
   The check happens when the `fun` expression is evaluated, not when the function is called.
 
@@ -225,8 +226,10 @@ combined left to right with `combine_err`. Otherwise the result is `con Tag [v1 
 `(case s clause…)` — checks first, before `s` is evaluated:
 
 - no clauses ⇒ `malformed: case has no clauses`;
-- two clauses with the same tag ⇒ `malformed: duplicate case tag 'T'`;
-- duplicate variables in any one clause ⇒ `malformed: duplicate variable 'x' in clause 'T'`.
+- two clauses with the same tag ⇒ `malformed: duplicate case tag 'T'` (if there is more is more than
+   one duplicate, it is not specified which should be included in the error message);
+- duplicate variables in any one clause ⇒ `malformed: duplicate variable 'x' in clause 'T'` (if there
+   is more than one duplicate, it is not specified which should be included in the error message)
 
 Then:
 
@@ -258,9 +261,10 @@ Every error message has the form `<category>: <detail>`:
 | `scope`     | `free variable 'x'`                                                                                                                                                    |
 | `type`      | `expected int operands for 'op'`; `'==' needs two ints or two bools`; `'if' condition must be a bool`; `expected a function`; `'case' scrutinee must be a constructor` |
 | `arith`     | `division by zero`; `modulo by zero`                                                                                                                                   |
-| `arity`     | `function expects N arguments, got M`; `clause 'T' binds N variables but the constructor has M fields`                                                                 |
+| `arity`     | `function expects N arguments, got M`; `clause 'T' binds N variables but the constructor has M fields`                                                                  |
 | `match`     | `no clause for tag 'T'`                                                                                                                                                |
 | `malformed` | `function has no parameters`; `duplicate parameter 'p'`; `case has no clauses`; `duplicate case tag 'T'`; `duplicate variable 'x' in clause 'T'`                       |
+| `internal`  | Indicates unreachable code in the interpreter or parser. Forms of these are not part of the spec.                                                                      |
 
 Combined errors have the form `[ d1 | d2 ]` where `d1`, `d2` are full messages.
 
@@ -280,14 +284,14 @@ Combined errors have the form `[ d1 | d2 ]` where `d1`, `d2` are full messages.
 | `(case (con None) (None 0) (Some v v))`                   | `INT 0`                                                             |
 | `(let y 10 (let f (fun x (+ x y)) (let y 20 (app f 1))))` | `INT 11`                                                            |
 | `(/ 1 0)`                                                 | `ERROR 'arith: division by zero'`                                   |
-| `(== 1 #true)`                                            | `ERROR "type: '==' needs two ints or two bools"`                    |
+| `(== 1 #true)`                                            | `ERROR 'type: '==' needs two ints or two bools'`                    |
 | `(let x (app 1 2) 5)`                                     | `ERROR 'type: expected a function'`                                 |
-| `(case (con A) (B 0))`                                    | `ERROR "match: no clause for tag 'A'"`                              |
+| `(case (con A) (B 0))`                                    | `ERROR 'match: no clause for tag 'A''`                              |
 | `(case (con A))`                                          | `ERROR 'malformed: case has no clauses'`                            |
 | `(app (fun x x))`                                         | `ERROR 'arity: function expects 1 arguments, got 0'`                |
 | `(fun 7)`                                                 | `ERROR 'malformed: function has no parameters'`                     |
-| `(fun x x x)`                                             | `ERROR "malformed: duplicate parameter 'x'"`                        |
-| `(+ y (app 1 2))`                                         | `ERROR "[ scope: free variable 'y' \| type: expected a function ]"` |
+| `(fun x x x)`                                             | `ERROR 'malformed: duplicate parameter 'x''`                        |
+| `(+ y (app 1 2))`                                         | `ERROR '[ scope: free variable 'y' \| type: expected a function ]'` |
 
 Comments: `(+ 1 ; one` followed on the next line by `2)` evaluates to `INT 3`.
 
