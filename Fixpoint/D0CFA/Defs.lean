@@ -1,0 +1,38 @@
+-- Types
+
+def Var := String
+deriving DecidableEq
+
+inductive Expr where
+  | lamE (x : Var) (e : Expr) : Expr
+  | appE (e0 e1 : Expr) : Expr
+  | refE (x : Var) : Expr
+
+inductive Value where  -- Demand 0CFA: no environments
+  | lamV (x : Var) (e : Expr) : Value
+
+inductive RContext where
+  | topC : RContext
+  | lamC (x : Var) (ctx : RContext) : RContext
+  | appC_operand (e0 : Expr) (ctx : RContext) : RContext
+  | appC_operator (ctx : RContext) (e1 : Expr) : RContext
+
+def Cursor := Expr × RContext
+
+
+-- Nondet Monad
+
+abbrev ND := List
+
+instance monadND : Monad ND where
+  pure a := [a]
+  bind a f := a.flatMap f
+
+instance : EmptyCollection (ND α) where
+  emptyCollection := []
+
+def choose (a b : α) : ND α := [a, b]
+
+def chooseFrom (a b : ND α) : ND α := a ++ b
+
+def fail : ND α := []
