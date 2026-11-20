@@ -16,6 +16,8 @@ inductive RContext where
   | lamC (x : Var) (ctx : RContext) : RContext
   | appC_operand (e0 : Expr) (ctx : RContext) : RContext
   | appC_operator (ctx : RContext) (e1 : Expr) : RContext
+  -- NOTE: appC_X indicates that *the hole* is X, not that the
+  --  structure contains X. So appC_operand contains the operator.
 
 def Cursor := Expr × RContext
 
@@ -23,6 +25,8 @@ def Cursor := Expr × RContext
 -- Nondet Monad
 
 abbrev ND := List
+
+namespace ND
 
 instance monadND : Monad ND where
   pure a := [a]
@@ -36,3 +40,5 @@ def choose (a b : α) : ND α := [a, b]
 def chooseFrom (a b : ND α) : ND α := a ++ b
 
 def fail : ND α := []
+
+end ND

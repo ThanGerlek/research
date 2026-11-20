@@ -6,7 +6,7 @@ import Fixpoint.D0CFA.Defs
 def assertApp (cursor : Cursor) : ND Cursor := do
   match cursor.1 with
   | .appE _ _ => pure cursor
-  | _ => fail
+  | _ => ND.fail
 
 
 -- Meta-functions
@@ -16,8 +16,8 @@ def binder (x : Var) (cursor : Cursor) : Option Cursor :=
   match ctx with
   | .topC => none  -- Error: malformed program: failed to find a binder
   | .lamC y ctx =>
-    if x = y then some cursor else
-    binder x ⟨.lamE x e, ctx⟩
+    if x = y then some ⟨.lamE y e, ctx⟩ else
+    binder x ⟨.lamE y e, ctx⟩
   | .appC_operator ctx e1 => binder x ⟨.appE e e1, ctx⟩
   | .appC_operand e0 ctx => binder x ⟨.appE e0 e, ctx⟩
 termination_by cursor.2
@@ -73,43 +73,43 @@ mutual  -- TODO! Add fixpoint or cache; otherwise recursion will diverge
       -- Evaluate its operator to get some lambda.
       let operatorCursor : Cursor := ⟨e0, .appC_operator ctx e1⟩ -- Step into the operator
       let ⟨lam_expr, lam_ctx⟩ ← evaluate operatorCursor
-      match lam_expr with  -- TODO? Asserting this is a lamE variant. Is that needed?
+      match lam_expr with  -- Asserting this is a lamE variant. Failure should be unreachable.
       | .lamE x ebody =>
         -- Evaluate the lambda’s body. Return the result.
         let bodyCursor : Cursor := ⟨ebody, .lamC x lam_ctx⟩  -- Step into the lambda body
         evaluate bodyCursor
-      | _ => fail
+      | _ => ND.fail
   --
   -- To evaluate a reference:
     | .refE x =>
       -- Find its binding lambda.
       match binder x cursor with
-      | none => fail  -- TODO! Error: failed to find a binder
+      | none => ND.fail
       | some binderCursor =>
       -- Expr-resolve the lambda to get an application.
       let ⟨app_expr, app_ctx⟩ ← exprResolve binderCursor
-      match app_expr with  -- TODO? Asserting this is an appE variant. Is that needed?
+      match app_expr with  -- Asserting this is an appE variant. Failure should be unreachable.
       | .appE e0 e1 =>
         -- Evaluate the application’s operand, and return the result.
         let operandCursor : Cursor := ⟨e1, .appC_operand e0 app_ctx⟩
         evaluate operandCursor
-      | _ => fail
+      | _ => ND.fail
 
 
   partial def exprResolve (cursor : Cursor) : ND Cursor := do
     let ⟨e, ctx⟩ := cursor
     match ctx with
-    | .topC => fail
+    | .topC => ND.fail
   --
   -- To expr-resolve the body of a lambda:
      -- TODO! FIXME -- Claude identified an issue
     | .lamC _ _ =>
       -- Call-resolve that body to get an application B.
       let b ← callResolve cursor
-      let b ← assertApp b  -- TODO? Is this uneeded?
+      let b ← assertApp b  -- Failure should be unreachable.
       -- Expr-resolve that application to get another application A.
       let a ← exprResolve b
-      let a ← assertApp a  -- TODO? Is this uneeded?
+      let a ← assertApp a  -- Failure should be unreachable.
       -- Return A.
       pure a
   --
@@ -118,14 +118,14 @@ mutual  -- TODO! Add fixpoint or cache; otherwise recursion will diverge
       -- Evaluate the operator to get some lambda.
       let operatorCursor : Cursor := ⟨e0, .appC_operator appCtx e⟩
       let ⟨lam_expr, lam_ctx⟩ ← evaluate operatorCursor
-      match lam_expr with  -- TODO? Asserting this is a lamE variant. Is that needed?
+      match lam_expr with  -- Asserting this is a lamE variant. Failure should be unreachable.
       | .lamE x ebody =>
         -- Find-resolve the lambda’s parameter with its body to get a reference to that parameter.
         let bodyCursor : Cursor := ⟨ebody, .lamC x lam_ctx⟩  -- Step into the lambda body
         let refCursor ← find x bodyCursor
         -- Expr-resolve that reference, and return the result.
         exprResolve refCursor
-      | _ => fail
+      | _ => ND.fail
   --
   -- To expr-resolve an operator:
     | .appC_operator appCtx e1 =>
@@ -143,8 +143,8 @@ mutual  -- TODO! Add fixpoint or cache; otherwise recursion will diverge
       -- Expr-resolve the (entire) lambda to get an application, and return the result.
       let lamCursor : Cursor := ⟨.lamE x e, bodyCtx⟩  -- Step out
       let c ← exprResolve lamCursor
-      assertApp c  -- TODO? Is this uneeded?
+      assertApp c  -- Failure should be unreachable.
   --
-    | _ => fail
+    | _ => ND.fail
 
 end
