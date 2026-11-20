@@ -1,4 +1,4 @@
-import Fixpoint.ADI.Cache
+import Fixpoint.Cache.Cache
 import Std.Data.HashMap
 import Std.Data.HashSet
 open Std

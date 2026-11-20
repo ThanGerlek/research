@@ -1,4 +1,4 @@
-import Fixpoint.adi.Interpreter
+import Fixpoint.EZeroCFA.Interpreter
 
 
 open ADI.Cache

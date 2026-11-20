@@ -1,4 +1,4 @@
-import Fixpoint.adi.Cache
+import Fixpoint.Cache.Cache
 
 namespace ADI.Widen
 

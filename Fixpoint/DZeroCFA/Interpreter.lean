@@ -1,4 +1,4 @@
-import Fixpoint.D0CFA.Defs
+import Fixpoint.DZeroCFA.Defs
 
 
 -- Helpers

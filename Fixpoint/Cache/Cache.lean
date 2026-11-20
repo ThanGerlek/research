@@ -1,7 +1,7 @@
 import Std.Data.HashMap
 import Std.Data.HashSet
 
-import Fixpoint.ADI.Data
+import Fixpoint.Cache.Defs
 
 open Std
 
