@@ -1,12 +1,32 @@
 import Fixpoint.DZeroCFA.Defs
 
+import Fixpoint.Cache.Cache
+import Fixpoint.Cache.Defs
+
+
+-- Equation building
+
+-- Used as part of the memoization key, to indentify which function is being called
+inductive FnMarker where
+  | evaluateMarker
+  | exprResolveMarker
+  | callResolveMarker
+  deriving BEq, Hashable, Repr
+
+
+-- Instantiate the interpreter monad.
+-- At the moment, it's just fixpoint (aka Cache), which has nondeterminism effects already, so it subsumes that.
+abbrev M := Cache.CacheM (FnMarker × Cursor) (Std.HashSet Cursor)
+
+abbrev Selv := (FnMarker × Cursor) → M Cursor
+
 
 -- Helpers
 
-def assertApp (cursor : Cursor) : ND Cursor := do
+def assertApp (cursor : Cursor) : M Cursor := do
   match cursor.1 with
   | .appE _ _ => pure cursor
-  | _ => ND.fail
+  | _ => Cache.fail
 
 
 -- Meta-functions
@@ -23,19 +43,19 @@ def binder (x : Var) (cursor : Cursor) : Option Cursor :=
 termination_by cursor.2
 
 
-def find (x : Var) (cursor : Cursor) : List Cursor :=
+def find (x : Var) (cursor : Cursor) : M Cursor :=
   let ⟨e, ctx⟩ := cursor
   match e with
 --
 -- To find a variable within a reference:
   | .refE y =>
     -- Make sure it's the same variable. If so, return that reference.
-    if x != y then [] else [cursor]
+    if x != y then Cache.fail else pure cursor
 --
 -- To find a variable within a lambda:
   | .lamE y bodyExpr =>
     -- If the lambda shadows the variable, then nothing.
-    if y = x then [] else
+    if y = x then Cache.fail else
     -- Otherwise, find within the lambda’s body.
     let bodyCursor: Cursor := ⟨bodyExpr, .lamC y ctx⟩  -- Step in
     find x bodyCursor
@@ -49,7 +69,7 @@ def find (x : Var) (cursor : Cursor) : List Cursor :=
     let operandCursor : Cursor := ⟨e0, .appC_operator ctx e1⟩  -- Step in
     let operandRefs := find x operandCursor
     -- Union the results.
-    operatorRefs ++ operandRefs
+    Cache.each [operatorRefs, operandRefs]
 termination_by cursor.1
 decreasing_by
   · simp
@@ -61,7 +81,13 @@ decreasing_by
 
 mutual  -- TODO! Add fixpoint or cache; otherwise recursion will diverge
 
-  partial def evaluate (cursor : Cursor) : ND Cursor := do
+  partial def evaluate (self : Selv) (cursor : Cursor) : M Cursor := do
+    -- Overload all three open-recursive functions, for convencience and clarity.
+    -- This means the signatures are the same as if they were normal recursive functions, so I can write like it's normal recursion, even though under the hood it uses `self` for open recursion.
+    let evaluate c := self ⟨.evaluateMarker, c⟩
+    let exprResolve c := self ⟨.exprResolveMarker, c⟩
+    let _callResolve c := self ⟨.callResolveMarker, c⟩
+
     let ⟨e, ctx⟩ := cursor
     match e with
   --
@@ -78,13 +104,13 @@ mutual  -- TODO! Add fixpoint or cache; otherwise recursion will diverge
         -- Evaluate the lambda’s body. Return the result.
         let bodyCursor : Cursor := ⟨ebody, .lamC x lam_ctx⟩  -- Step into the lambda body
         evaluate bodyCursor
-      | _ => ND.fail
+      | _ => Cache.fail
   --
   -- To evaluate a reference:
     | .refE x =>
       -- Find its binding lambda.
       match binder x cursor with
-      | none => ND.fail
+      | none => Cache.fail
       | some binderCursor =>
       -- Expr-resolve the lambda to get an application.
       let ⟨app_expr, app_ctx⟩ ← exprResolve binderCursor
@@ -93,16 +119,21 @@ mutual  -- TODO! Add fixpoint or cache; otherwise recursion will diverge
         -- Evaluate the application’s operand, and return the result.
         let operandCursor : Cursor := ⟨e1, .appC_operand e0 app_ctx⟩
         evaluate operandCursor
-      | _ => ND.fail
+      | _ => Cache.fail
 
 
-  partial def exprResolve (cursor : Cursor) : ND Cursor := do
+  partial def exprResolve (self : Selv) (cursor : Cursor) : M Cursor := do
+    -- Overload all three open-recursive functions, for convencience and clarity.
+    -- This means the signatures are the same as if they were normal recursive functions, so I can write like it's normal recursion, even though under the hood it uses `self` for open recursion.
+    let evaluate c := self ⟨.evaluateMarker, c⟩
+    let exprResolve c := self ⟨.exprResolveMarker, c⟩
+    let callResolve c := self ⟨.callResolveMarker, c⟩
+
     let ⟨e, ctx⟩ := cursor
     match ctx with
-    | .topC => ND.fail
+    | .topC => Cache.fail
   --
   -- To expr-resolve the body of a lambda:
-     -- TODO! FIXME -- Claude identified an issue
     | .lamC _ _ =>
       -- Call-resolve that body to get an application B.
       let b ← callResolve cursor
@@ -125,7 +156,7 @@ mutual  -- TODO! Add fixpoint or cache; otherwise recursion will diverge
         let refCursor ← find x bodyCursor
         -- Expr-resolve that reference, and return the result.
         exprResolve refCursor
-      | _ => ND.fail
+      | _ => Cache.fail
   --
   -- To expr-resolve an operator:
     | .appC_operator appCtx e1 =>
@@ -133,8 +164,13 @@ mutual  -- TODO! Add fixpoint or cache; otherwise recursion will diverge
       let appCursor : Cursor := ⟨.appE e e1, appCtx⟩  -- Step out
       pure appCursor
 
+  partial def callResolve (self : Selv) (cursor : Cursor) : M Cursor := do
+    -- Overload all three open-recursive functions, for convencience and clarity.
+    -- This means the signatures are the same as if they were normal recursive functions, so I can write like it's normal recursion, even though under the hood it uses `self` for open recursion.
+    let _evaluate c := self ⟨.evaluateMarker, c⟩
+    let exprResolve c := self ⟨.exprResolveMarker, c⟩
+    let _callResolve c := self ⟨.callResolveMarker, c⟩
 
-  partial def callResolve (cursor : Cursor) : ND Cursor := do
     let ⟨e, ctx⟩ := cursor
     match ctx with
   --
@@ -145,6 +181,12 @@ mutual  -- TODO! Add fixpoint or cache; otherwise recursion will diverge
       let c ← exprResolve lamCursor
       assertApp c  -- Failure should be unreachable.
   --
-    | _ => ND.fail
+    | _ => Cache.fail
 
 end
+
+
+def equation (self : Selv) : Selv
+  | ⟨.evaluateMarker, c⟩ => evaluate self c
+  | ⟨.exprResolveMarker, c⟩ => exprResolve self c
+  | ⟨.callResolveMarker, c⟩ => callResolve self c
