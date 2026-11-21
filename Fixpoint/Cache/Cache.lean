@@ -6,7 +6,7 @@ import Fixpoint.Cache.Defs
 open Std
 
 
-namespace ADI.Cache
+namespace Cache
 
 /-! A demand-driven fixed-point cache.
 
@@ -149,4 +149,4 @@ def run {K V α} [BEq K] [Hashable K] [Lattice V]
   c { ref, normKey, flushing, dirty } (fun _ => pure ())
   ref.get
 
-end ADI.Cache
+end Cache
