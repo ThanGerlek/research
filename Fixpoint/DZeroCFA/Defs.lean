@@ -25,6 +25,25 @@ def Cursor := Expr × RContext
   deriving BEq, Hashable, Repr
 
 
+-- Sugaring
+
+inductive SugExpr where
+  | lamE (x : Var) (e : SugExpr) : SugExpr
+  | appE (e0 e1 : SugExpr) : SugExpr
+  | refE (x : Var) : SugExpr
+  | letE (x : Var) (e ebody : SugExpr) : SugExpr
+  | idE (n : Var) : SugExpr
+  deriving BEq, Hashable, Repr
+
+def desugar (e : SugExpr) : Expr :=
+  match e with
+  | .lamE x e => .lamE x (desugar e)
+  | .appE e0 e1 => .appE (desugar e0) (desugar e1)
+  | .refE x => .refE x
+  | .letE x e ebody => .appE (.lamE x (desugar ebody)) (desugar e)
+  | .idE n => .lamE n (.refE n)
+
+
 -- Nondet Monad
 
 abbrev ND := List
