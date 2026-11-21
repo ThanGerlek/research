@@ -2,8 +2,6 @@ import Std.Data.HashMap
 import Std.Data.HashSet
 open Std
 
-namespace ADI
-
 /-! ============================================================
     Syntax and abstract values
     ============================================================
@@ -265,6 +263,4 @@ def examples : IO Unit := do
     (Let "ω" (L "x" (A (V "x") (V "x")))
       (A (V "ω") (V "ω")))
 
-end ADI
-
-def main : IO Unit := ADI.examples
+def main : IO Unit := examples

@@ -1,8 +1,7 @@
 import Fixpoint.Cache.Cache
 
-namespace ADI.Widen
 
-open ADI.Cache
+open Cache
 
 /-! Two caches the 0CFA powerset cannot show.
 
@@ -104,5 +103,3 @@ def demos : IO Unit := do
   IO.println "ok normKey"
 
 #eval demos
-
-end ADI.Widen

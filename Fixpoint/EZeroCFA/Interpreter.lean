@@ -3,16 +3,15 @@ import Std.Data.HashMap
 import Std.Data.HashSet
 open Std
 
-namespace ADI.Interp
 
-/-! 0CFA interpreter over `ADI.Cache`.
+/-! 0CFA interpreter over `Cache.Cache`.
 
     Answers are sets of abstract values, ordered by inclusion. The cache joins
     each published set into the cell and re-runs subscribers when the cell
     grows. Recursive calls go through `self`. `bindBang` publishes a set to a
     `.sigma` key, whose producer itself returns nothing. -/
 
-open ADI.Cache
+open Cache
 
 /-! ============================================================
     Syntax and abstract values
@@ -133,6 +132,3 @@ def showStore (tbl : HashMap Key (Entry (HashSet Val))) : String :=
       some s!"{x} ↦ {"{" ++ ", ".intercalate shown ++ "}"}"
     | _, _ => none
   "  " ++ "\n  ".intercalate ((items.toArray.qsort (· < ·)).toList)
-
-
-end ADI.Interp

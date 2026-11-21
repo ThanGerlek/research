@@ -1,9 +1,7 @@
 import Fixpoint.EZeroCFA.Interpreter
 
 
-open ADI.Cache
-
-namespace ADI.Interp
+open Cache
 
 
 /-! ============================================================
@@ -60,5 +58,3 @@ def examples : IO Unit := do
       (A (V "ω") (V "ω")))
 
 #eval examples
-
-end ADI.Interp
