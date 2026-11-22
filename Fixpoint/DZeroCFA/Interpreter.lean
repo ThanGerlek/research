@@ -193,36 +193,3 @@ def equation (self : Selv) : Selv
   | ⟨.evaluateMarker, c⟩ => evaluate self c
   | ⟨.exprResolveMarker, c⟩ => exprResolve self c
   | ⟨.callResolveMarker, c⟩ => callResolve self c
-
-  -- (let f (lam x x) (let a (app f 1) (let b (app f 2) a)))
-def prgm : SugExpr :=
-  .letE "f" (.lamE "x" $ .refE "x") $
-  .letE "a" (.appE (.refE "f") (.idE "1")) $
-  .letE "b" (.appE (.refE "f") (.idE "2")) $
-  .refE "a"  -- This ref to "a" is the expression to be queried.
-def prgmCtx : RContext := .lamC "b" $ .appC_operator (.lamC "a" $ .appC_operator (.lamC "f" (.appC_operator (.topC) $ Expr.lamE "x" $ Expr.refE "x")) $ Expr.appE (Expr.refE "f") $ Expr.lamE "1" $ Expr.refE "1") $ Expr.appE (Expr.refE "f") $ Expr.lamE "2" $ Expr.refE "2"
-def queryCursor : Cursor := ⟨.refE "a", prgmCtx⟩
-
-def demo : IO Unit := do
-  --   demo "multiple values"
-  -- (let f (lam x x) (let a (app f 1) (let b (app f 2) a)))
-  let query : FnMarker × Cursor := ⟨.evaluateMarker, queryCursor⟩
-
-  let tbl ← Cache.run (Cache.gfix equation query)
-
-  -- let f0_key : Fn × Input := ⟨Fn.f, (0 : Nat)⟩
-  -- let f0_cell := tbl[f0_key]?
-  -- let g0_key : Fn × Input := ⟨Fn.g, (0 : Nat)⟩
-  -- let g0_cell := tbl[g0_key]?
-  -- IO.println (showCell "f(0)" f0_cell)
-  -- IO.println (showCell "g(0)" g0_cell)
-  -- let hasBoth (entry : Option (Entry (HashSet Output))) : Bool :=
-  --   match entry with
-  --   | some (some vs, _) => vs.contains "fResult" && vs.contains "gResult"
-  --   | _ => false
-  -- if hasBoth f0_cell && hasBoth g0_cell then
-  --   pure ()
-  -- else
-  --   throw <| IO.userError "expected both cells to contain f(0) and g(0)"
-
-#eval demo
