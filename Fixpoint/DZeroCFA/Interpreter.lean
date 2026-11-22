@@ -208,8 +208,7 @@ def demo : IO Unit := do
   -- (let f (lam x x) (let a (app f 1) (let b (app f 2) a)))
   let query : FnMarker × Cursor := ⟨.evaluateMarker, queryCursor⟩
 
-  -- FIXME! Cache.fix expects an AbstractCursor, but the interpreter is written over concrete Cursor.
-  -- let tbl ← Cache.run (Cache.fix equation query)
+  let tbl ← Cache.run (Cache.gfix equation query)
 
   -- let f0_key : Fn × Input := ⟨Fn.f, (0 : Nat)⟩
   -- let f0_cell := tbl[f0_key]?

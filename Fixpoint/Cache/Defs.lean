@@ -18,3 +18,12 @@ instance [BEq α] [Hashable α] : Lattice (HashSet α) where
   le a b := a.toList.all fun x => b.contains x
   join a b := a.toList.foldl (fun s x => s.insert x) b
   widen a b := a.toList.foldl (fun s x => s.insert x) b
+
+/-- `V` abstracts a set of `C`s: `inj` abstracts one answer, `elems` concretizes a cell. -/
+class Abstraction (V C : Type) where
+  inj : C → V
+  elems : V → List C
+
+instance [BEq C] [Hashable C] : Abstraction (HashSet C) C where
+  inj c := {c}
+  elems := HashSet.toList

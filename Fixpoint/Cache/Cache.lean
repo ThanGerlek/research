@@ -149,4 +149,22 @@ def run {K V α} [BEq K] [Hashable K] [Lattice V]
   c { ref, normKey, flushing, dirty } (fun _ => pure ())
   ref.get
 
+
+/-- Like `fix`, but the equation is written over a concrete answer type `C` with
+    a Galois connection to the cache's abstract answer type.
+
+    Normal `fix` requires the interpreter to be written over the same type as
+    what the cache returns, so we get `K → CacheM K V V`. `gfix` generalizes that
+    to `K → CacheM K V C`. But it still needs some way of converting between
+    abstract cache-results and concrete interpreter-values. Hence, we need a
+    Galois connection (encoded by the Abstraction typeclass): `elems` (aka γ),
+    which concretizes a cell, and `inj` (aka α), which abstracts one answer.-/
+partial def gfix {K V C} [BEq K] [Hashable K] [Lattice V] [Abstraction V C]
+    (equation : (K → CacheM K V C) → K → CacheM K V C) (k : K) : CacheM K V C :=
+  fun t κ =>
+    demand k (fun _ t' κ' =>
+        equation (gfix equation) k t' (fun c => κ' (Abstraction.inj c)))
+      t (fun v => (Abstraction.elems v).forM κ)
+
+
 end Cache
